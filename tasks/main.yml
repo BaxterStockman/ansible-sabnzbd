@@ -1,0 +1,6 @@
+---
+# tasks file for sabnzbd
+- include: packer.yml
+  when: ansible_pkg_mgr == 'packer'
+
+- include: config.yml

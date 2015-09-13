@@ -1,0 +1,44 @@
+---
+- name: fetch sabnzbd config file
+  fetch:
+    src: "{{ sabnzbd_config_src }}"
+    dest: "{{ sabnzbd_config_dest }}"
+    fail_on_missing: "{{ sabnzbd_config_fail_on_missing }}"
+    validate_checksum: "{{ sabnzbd_config_validate_checksum }}"
+  register: sabnzbd_config_tempfile
+
+- name: build list of items in sabnzbd config
+  set_fact:
+    sabnzbd_config_items: >
+      {%- set _sabnzbd_config_items = [] -%}
+      {%- for section, options in sabnzbd_config_settings.iteritems() -%}
+        {%- for option, value in options.iteritems() -%}
+          {%- set _null = _sabnzbd_config_items.append({
+            'section': section,
+            'option': option,
+            'value': value
+          }) -%}
+        {%- endfor -%}
+      {%- endfor -%}
+      {{ _sabnzbd_config_items }}
+  tags:
+    - sabnzbd
+
+- name: alter sabnzbd config file
+  become: yes
+  ini_file:
+    backup: "{{ sabnzbd_config_backup | default(omit) }}"
+    dest: "{{ sabnzbd_config_src }}"
+    follow: "{{ sabnzbd_config_follow | default(omit) }}"
+    group: "{{ sabnzbd_config_group | default(omit) }}"
+    mode: "{{ sabnzbd_config_mode | default(omit) }}"
+    owner: "{{ sabnzbd_config_owner | default(omit) }}"
+    selevel: "{{ sabnzbd_config_selevel | default(omit) }}"
+    serole: "{{ sabnzbd_config_serole | default(omit) }}"
+    setype: "{{ sabnzbd_config_setype | default(omit) }}"
+    option: "{{ item.option | default(omit) }}"
+    value: "{{ item.value | default(omit) }}"
+    section: "{{ item.section | default(omit) }}"
+  with_items: "{{ sabnzbd_config_items }}"
+  tags:
+    - sabnzbd

@@ -1,0 +1,10 @@
+---
+# Sample playbook for sabnzbd role
+- hosts: all
+  roles:
+    - role: sabnzbd
+      sabnzbd_config_settings:
+        _:
+          this: that
+        general:
+          port: 8888
