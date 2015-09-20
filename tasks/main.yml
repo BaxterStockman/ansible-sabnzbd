@@ -1,15 +1,5 @@
 ---
 # tasks file for sabnzbd
-- debug:
-    var: hostvars
-  tags:
-    - debug
-
-- debug:
-    var: vars
-  tags:
-    - debug
-
 - include: packer.yml
   when: ansible_pkg_mgr == 'pacman'
   tags:
@@ -34,7 +24,15 @@
     - config
     - generate
 
-- include: config.yml
+- include: assemble.yml
+  when: sabnzbd_config_assemble is defined and sabnzbd_config_assemble | bool
   tags:
     - sabnzbd
     - config
+    - assemble
+
+    #- include: sabnzbd_config.yml
+    #  tags:
+    #    - sabnzbd
+    #    - config
+    #    - ini_file

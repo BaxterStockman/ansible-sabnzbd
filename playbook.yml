@@ -5,7 +5,11 @@
     - role: sabnzbd
       sabnzbd_config_settings:
         misc:
-          port: 8888
+          port: 8889
+        one:
+          tiw: free
+
+
       sabnzbd_config_fragments_dir: "{{ playbook_dir }}/fragments"
       sabnzbd_config_mode: '0644'
 
