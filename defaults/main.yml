@@ -6,3 +6,4 @@ sabnzbd_config_dest: /tmp/ansible-sabnzbd
 sabnzbd_config_fail_on_missing: no
 sabnzbd_config_validate_checksum: yes
 sabnzbd_config_settings: {}
+sabnzbd_tmpdir_dirname: /tmp

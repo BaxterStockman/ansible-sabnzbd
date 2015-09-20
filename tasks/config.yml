@@ -1,11 +1,71 @@
 ---
-- name: fetch sabnzbd config file
-  fetch:
-    src: "{{ sabnzbd_config_src }}"
-    dest: "{{ sabnzbd_config_dest }}"
-    fail_on_missing: "{{ sabnzbd_config_fail_on_missing }}"
-    validate_checksum: "{{ sabnzbd_config_validate_checksum }}"
-  register: sabnzbd_config_tempfile
+# After sabnzbd installation...
+- name: make temporary directory
+  command: >
+    mktemp -d --tmpdir={{ sabnzbd_tmpdir_dirname }} ansible-sabnzbd-XXXXXXXXXX
+  register: sabnzbd_mktemp
+  tags:
+    - sabnzbd
+    - config
+
+- set_fact:
+    sabnzbd_tmpdir: "{{ sabnzbd_mktemp.stdout }}"
+  tags:
+    - sabnzbd
+    - config
+
+- set_fact:
+    sabnzbd_pidfile: "{{ sabnzbd_tmpdir }}/sabnzbd.pid"
+    sabnzbd_config_tmp: "{{ sabnzbd_tmpdir }}/sabnzbd.ini"
+  tags:
+    - sabnzbd
+    - config
+
+- name: generate sabnzbd.ini
+  command: >
+    sabnzbd
+      -f sabnzbd.ini
+      -d
+      --pidfile {{ sabnzbd_pidfile }}
+  register: sabnzbd_daemon
+  args:
+    chdir: "{{ sabnzbd_tmpdir }}"
+  tags:
+    - sabnzbd
+    - config
+
+- name: wait for sabnzbd pidfile to exist
+  wait_for:
+    path: "{{ sabnzbd_pidfile }}"
+    timeout: "{{ sabnzbd_pidfile_timeout | default(omit) }}"
+  tags:
+    - sabnzbd
+    - config
+
+- name: get encoded sabnzbd pid
+  slurp:
+    src: "{{ sabnzbd_pidfile }}"
+  register: sabnzbd_pidfile_encoded
+  tags:
+    - sabnzbd
+    - config
+
+- set_fact:
+    sabnzbd_pid: >
+      {{ sabnzbd_pidfile_encoded.content
+         | b64decode
+         | regex_replace('[\n\r]*$', '')
+      }}
+  tags:
+    - sabnzbd
+    - config
+
+- name: kill sabnzbd daemon
+  command: "kill -s SIGHUP {{ sabnzbd_pid }}"
+  ignore_errors: yes
+  tags:
+    - sabnzbd
+    - config
 
 - name: build list of items in sabnzbd config
   set_fact:
@@ -23,6 +83,20 @@
       {{ _sabnzbd_config_items }}
   tags:
     - sabnzbd
+  tags:
+    - sabnzbd
+    - config
+
+- name: insert dummy section to prevent parser error on top-level key(s)
+  become: yes
+  lineinfile:
+    dest: "{{ sabnzbd_config_src }}"
+    line: '[ ]'
+    insertbefore: BOF
+    state: present
+  tags:
+    - sabnzbd
+    - config
 
 - name: alter sabnzbd config file
   become: yes
@@ -42,3 +116,15 @@
   with_items: "{{ sabnzbd_config_items }}"
   tags:
     - sabnzbd
+    - config
+
+- name: remove dummy section
+  become: yes
+  lineinfile:
+    dest: "{{ sabnzbd_config_src }}"
+    regexp: '^\s*\[ \]\s*$'
+    state: absent
+  tags:
+    - sabnzbd
+    - config
+

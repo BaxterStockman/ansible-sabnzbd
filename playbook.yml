@@ -4,7 +4,13 @@
   roles:
     - role: sabnzbd
       sabnzbd_config_settings:
-        _:
-          this: that
-        general:
+        misc:
           port: 8888
+        categories:
+          '[*]':
+            priority: 0
+            pp: 3
+            name: '*'
+            script: None
+            newzbin: ''
+            dir: ''
