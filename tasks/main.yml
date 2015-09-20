@@ -1,11 +1,38 @@
 ---
 # tasks file for sabnzbd
+- debug:
+    var: hostvars
+  tags:
+    - debug
+
+- debug:
+    var: vars
+  tags:
+    - debug
+
 - include: packer.yml
   when: ansible_pkg_mgr == 'pacman'
   tags:
     - sabznbd
     - pacman
     - packer
+
+- name: check whether sabnzbd.ini exists
+  stat:
+    path: "{{ sabnzbd_config_src }}"
+    follow: yes
+  register: sabnzbd_config_stat
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- include: generate.yml
+  when: not sabnzbd_config_stat.stat.exists
+  tags:
+    - sabnzbd
+    - config
+    - generate
 
 - include: config.yml
   tags:
