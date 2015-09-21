@@ -1,0 +1,7 @@
+---
+- name: add options to sabnzbd.ini
+  become: yes
+  sabnzbd_config:
+    dest: "/opt/sabnzbd/sabnzbd.ini"
+    options: "{{ sabnzbd_config_settings }}"
+

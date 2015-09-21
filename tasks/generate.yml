@@ -1,0 +1,71 @@
+---
+# Tasks file for generating sabznbd.ini
+- name: make temporary directory
+  command: >
+    mktemp -d --tmpdir={{ sabnzbd_tmpdir_dirname }} ansible-sabnzbd-XXXXXXXXXX
+  register: sabnzbd_mktemp
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- name: set locations for files related to temporary daemon
+  set_fact:
+    sabnzbd_tmpdir: "{{ sabnzbd_mktemp.stdout }}"
+    sabnzbd_pidfile: "{{ sabnzbd_mktemp.stdout }}/sabnzbd.pid"
+    sabnzbd_config_tmp: "{{ sabnzbd_mktemp.stdout }}/sabnzbd.ini"
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- name: generate sabnzbd.ini
+  command: >
+    sabnzbd
+      -f sabnzbd.ini
+      -d
+      --pidfile {{ sabnzbd_pidfile }}
+  register: sabnzbd_daemon
+  args:
+    chdir: "{{ sabnzbd_tmpdir }}"
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- name: wait for sabnzbd pidfile to exist
+  wait_for:
+    path: "{{ sabnzbd_pidfile }}"
+    timeout: "{{ sabnzbd_pidfile_timeout | default(omit) }}"
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- name: get encoded sabnzbd pid
+  slurp:
+    src: "{{ sabnzbd_pidfile }}"
+  register: sabnzbd_pidfile_encoded
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- set_fact:
+    sabnzbd_pid: >
+      {{ sabnzbd_pidfile_encoded.content
+         | b64decode
+         | regex_replace('[\n\r]*$', '')
+      }}
+  tags:
+    - sabnzbd
+    - config
+    - generate
+
+- name: kill sabnzbd daemon
+  command: "kill -s SIGHUP {{ sabnzbd_pid }}"
+  ignore_errors: yes
+  tags:
+    - sabnzbd
+    - config
+    - generate

@@ -24,13 +24,6 @@
     - config
     - generate
 
-- include: assemble.yml
-  when: sabnzbd_config_assemble is defined and sabnzbd_config_assemble | bool
-  tags:
-    - sabnzbd
-    - config
-    - assemble
-
     #- include: sabnzbd_config.yml
     #  tags:
     #    - sabnzbd
