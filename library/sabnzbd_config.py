@@ -93,67 +93,102 @@ import sys
 # do_config
 
 
-# ==============================================================
-# do_config
+class SabnzbdConfigWrapper:
+    def __init__(self, module, filename, state='batch', libdir=None,
+                 options=None, section=None, option=None, backup=False):
+        self.module = module
+        self.filename = filename
+        self.state = state
+        self.libdir = libdir
+        self.options = options
+        self.section = section
+        self.option = option
+        self.backup = backup
 
-def do_config(module, filename, libdir=None, options=None, backup=False):
-    if libdir is None:
-        import os
-        libdir = os.path.dirname(filename)
+        self.set_operation()
 
-    try:
-        sys.path.append(os.path.dirname(filename))
-        import sabnzbd.config
-    except:
-        module.fail_json(msg="Can't load SABnzbd python libraries from %s" %
-                         libdir)
+    def set_operation(self, state=None):
+        if state is None:
+            state = self.state
 
-    read_res = True
-    read_msg = ''
-    try:
-        read_res, read_msg = sabnzbd.config.read_config(filename)
-    except:
-        module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (
-            filename, sys.exc_info()[0]
-        ))
+        if state == 'batch':
+            self.operation = self.do_batch
+        elif state == 'present':
+            self.operation = self.do_present
+        elif state == 'absent':
+            self.operation = self.do_absent
+        else:
+            self.module.fail_json(msg=("%s is not a valid value for state" %
+                                       state))
 
-    if not read_res:
-        module.fail_json(msg="Can't read SABnzbd config file %s: %s" % ( filename, read_msg))
+    def run(self, *args, **kwargs):
+        self.load_config
+        changed = self.operation(*args, **kwargs)
 
-    # Merge the internal options database into the object representing the INI
-    # file
-    got_dconfig = True
-    dconfig = None
-    try:
-        (got_dconfig, dconfig) = sabnzbd.config.get_dconfig(None, None)
-    except:
-        module.fail_json(msg="Can't load SABnzbd database object %s: %s" % ( filename, sys.exc_info()[0]))
-
-    if not got_dconfig:
-        module.fail_json(
-            msg="Can't load SABnzbd database object %s: %s" % filename
-        )
-
-    # Save the initial configuration.
-    sabnzbd.config.CFG.merge(dconfig)
-    orig_config = sabnzbd.config.CFG.merge
-
-    # Now merge the wanted settings and compare
-    sabnzbd.config.CFG.merge(options)
-    changed = sabnzbd.config.modified = cmp(orig_config, sabnzbd.config.CFG) != 0
-
-    if changed and not module.check_mode:
-        if backup:
-            module.backup_local(filename)
+    def load_config(self):
+        libdir = self.libdir
+        if libdir is None:
+            import os
+            libdir = os.path.dirname(self.filename)
 
         try:
-            sabnzbd.config.CFG.write()
+            sys.path.append(os.path.dirname(libdir))
+            import sabnzbd.config
         except:
-            module.fail_json(msg="Can't save SABnzbd config file %s: %s" % (
+            self.module.fail_json(msg="Can't load SABnzbd python libraries from %s"
+                                  % libdir)
+
+        read_res = True
+        read_msg = ''
+        try:
+            read_res, read_msg = sabnzbd.config.read_config(filename)
+        except:
+            module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (
                 filename, sys.exc_info()[0]
             ))
 
-    return changed
+        if not read_res:
+            module.fail_json(msg="Can't read SABnzbd config file %s: %s" % ( filename, read_msg))
+
+        # Merge the internal options database into the object representing the INI
+        # file
+        got_dconfig = True
+        dconfig = None
+        try:
+            (got_dconfig, dconfig) = sabnzbd.config.get_dconfig(None, None)
+        except:
+            module.fail_json(msg="Can't load SABnzbd database object %s: %s" % ( filename, sys.exc_info()[0]))
+
+        if not got_dconfig:
+            module.fail_json(
+                msg="Can't load SABnzbd database object %s: %s" % filename
+            )
+
+        # Save the initial configuration.
+        sabnzbd.config.CFG.merge(dconfig)
+        self.orig_config = sabnzbd.config.CFG
+
+    def save_config(self, changed):
+        module = self.module
+
+        write_res = False
+        if changed and not module.check_mode:
+            if backup:
+                module.backup_local(filename)
+
+            try:
+                write_res = sabnzbd.config.CFG.write()
+            except:
+                module.fail_json(msg="Can't save SABnzbd config file %s: %s" % (
+                    filename, sys.exc_info()[0]
+                ))
+
+        return write_res
+
+    def do_batch(self):
+        # Now merge the wanted settings and compare
+        sabnzbd.config.CFG.merge(options)
+        return sabnzbd.config.modified = cmp(orig_config, sabnzbd.config.CFG) != 0
 
 
 # ==============================================================
