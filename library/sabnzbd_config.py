@@ -93,19 +93,31 @@ import sys
 # do_config
 
 
-class SabnzbdConfigWrapper:
+class SABnzbdConfigWrapper:
     def __init__(self, module, filename, state='batch', libdir=None,
-                 options=None, section=None, option=None, backup=False):
+                 options=None, section=None, option=None, value=None,
+                 backup=False):
         self.module = module
         self.filename = filename
         self.state = state
-        self.libdir = libdir
         self.options = options
-        self.section = section
         self.option = option
+        self.value = value
+        self.section = section
         self.backup = backup
 
         self.set_operation()
+        self.set_libdir(libdir)
+
+        libdir = self.libdir
+        try:
+            sys.path.append(libdir)
+            import sabnzbd.config
+        except ImportError:
+            self.module.fail_json(msg="Can't load SABnzbd python libraries from %s"
+                                  % libdir)
+        else:
+            self.sabnzbd_config = sabnzbd.config
 
     def set_operation(self, state=None):
         if state is None:
@@ -121,27 +133,25 @@ class SabnzbdConfigWrapper:
             self.module.fail_json(msg=("%s is not a valid value for state" %
                                        state))
 
-    def run(self, *args, **kwargs):
-        self.load_config
-        changed = self.operation(*args, **kwargs)
-
-    def load_config(self):
-        libdir = self.libdir
+    def set_libdir(self, libdir=None):
         if libdir is None:
             import os
             libdir = os.path.dirname(self.filename)
+        self.libdir = libdir
 
-        try:
-            sys.path.append(os.path.dirname(libdir))
-            import sabnzbd.config
-        except:
-            self.module.fail_json(msg="Can't load SABnzbd python libraries from %s"
-                                  % libdir)
+    def run(self, *args, **kwargs):
+        self.load_config
+        failmsg = '%s' % self.sabnzbd_config.CFG
+        self.module.fail_json(msg=failmsg)
+        changed = self.operation(*args, **kwargs)
+        self.save_config(changed)
+        return changed
 
+    def load_config(self):
         read_res = True
         read_msg = ''
         try:
-            read_res, read_msg = sabnzbd.config.read_config(filename)
+            read_res, read_msg = self.sabnzbd_config.read_config(self.filename)
         except:
             module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (
                 filename, sys.exc_info()[0]
@@ -155,7 +165,7 @@ class SabnzbdConfigWrapper:
         got_dconfig = True
         dconfig = None
         try:
-            (got_dconfig, dconfig) = sabnzbd.config.get_dconfig(None, None)
+            (got_dconfig, dconfig) = self.sabnzbd_config.get_dconfig(None, None)
         except:
             module.fail_json(msg="Can't load SABnzbd database object %s: %s" % ( filename, sys.exc_info()[0]))
 
@@ -165,11 +175,15 @@ class SabnzbdConfigWrapper:
             )
 
         # Save the initial configuration.
-        sabnzbd.config.CFG.merge(dconfig)
-        self.orig_config = sabnzbd.config.CFG
+        self.sabnzbd_config.CFG.merge(dconfig)
+        self.orig_config = self.sabnzbd_config.CFG
 
     def save_config(self, changed):
         module = self.module
+        if changed is None:
+            changed = self.changed
+
+        self.sabnzbd_config.modified = changed
 
         write_res = False
         if changed and not module.check_mode:
@@ -177,7 +191,7 @@ class SabnzbdConfigWrapper:
                 module.backup_local(filename)
 
             try:
-                write_res = sabnzbd.config.CFG.write()
+                write_res = self.sabnzbd_config.CFG.write()
             except:
                 module.fail_json(msg="Can't save SABnzbd config file %s: %s" % (
                     filename, sys.exc_info()[0]
@@ -187,8 +201,8 @@ class SabnzbdConfigWrapper:
 
     def do_batch(self):
         # Now merge the wanted settings and compare
-        sabnzbd.config.CFG.merge(options)
-        return sabnzbd.config.modified = cmp(orig_config, sabnzbd.config.CFG) != 0
+        self.sabnzbd_config.CFG.merge(options)
+        return cmp(orig_config, self.sabnzbd_config.CFG) != 0
 
 
 # ==============================================================
@@ -200,22 +214,35 @@ def main():
             dest = dict(required=True),
             libdir = dict(required=False),
             options = dict(required=True),
+            section = dict(required=False),
+            option = dict(required=False),
+            value = dict(required=False),
             backup = dict(default='no', type='bool'),
+            state = dict(default='batch')
         ),
         add_file_common_args = True,
         supports_check_mode = True
     )
 
-    info = dict()
-
     dest = os.path.expanduser(module.params['dest'])
+    libdir = None
+    if module.params['libdir'] is not None:
+        libdir = os.path.expanduser(module.params['libdir'])
+    section = module.params['section']
+    option = module.params['option']
+    value = module.params['value']
     options = module.params['options']
-    libdir = module.params['libdir']
+    state = module.params['state']
     backup = module.params['backup']
 
-    changed = do_config(module, dest, libdir, options, backup)
+    config = SABnzbdConfigWrapper(module, dest, libdir=libdir, section=section,
+                                  option=option, value=value, options=options,
+                                  state=state, backup=backup)
+
+    changed = config.run()
 
     file_args = module.load_file_common_arguments(module.params)
+    changed = module.set_fs_attributes_if_different(file_args, changed)
     changed = module.set_fs_attributes_if_different(file_args, changed)
 
     # Mission complete
@@ -223,5 +250,4 @@ def main():
 
 # import module snippets
 from ansible.module_utils.basic import *
-from ansible.utils import merge_hash
 main()
