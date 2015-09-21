@@ -7,3 +7,8 @@ sabnzbd_config_fail_on_missing: no
 sabnzbd_config_validate_checksum: yes
 sabnzbd_config_settings: {}
 sabnzbd_tmpdir_dirname: /tmp
+
+sabnzbd_owner: sabnzbd
+sabnzbd_group: sabnzbd
+sabnzbd_file_mode: '0644'
+sabnzbd_dir_mode: '0755'

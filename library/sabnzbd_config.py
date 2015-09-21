@@ -105,31 +105,53 @@ def do_config(module, filename, libdir=None, options=None, backup=False):
         sys.path.append(os.path.dirname(filename))
         import sabnzbd.config
     except:
-        module.fail_json(msg="Can't load SABnzbd python libraries from %s" % libdir)
+        module.fail_json(msg="Can't load SABnzbd python libraries from %s" %
+                         libdir)
 
     read_res = True
     read_msg = ''
     try:
         read_res, read_msg = sabnzbd.config.read_config(filename)
     except:
-        module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (filename, sys.exc_info()[0]))
+        module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (
+            filename, sys.exc_info()[0]
+        ))
 
     if not read_res:
-        module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (filename, read_msg))
+        module.fail_json(msg="Can't read SABnzbd config file %s: %s" % ( filename, read_msg))
 
-    orig_config = sabnzbd.config.CFG
+    # Merge the internal options database into the object representing the INI
+    # file
+    got_dconfig = True
+    dconfig = None
+    try:
+        (got_dconfig, dconfig) = sabnzbd.config.get_dconfig(None, None)
+    except:
+        module.fail_json(msg="Can't load SABnzbd database object %s: %s" % ( filename, sys.exc_info()[0]))
+
+    if not got_dconfig:
+        module.fail_json(
+            msg="Can't load SABnzbd database object %s: %s" % filename
+        )
+
+    # Save the initial configuration.
+    sabnzbd.config.CFG.merge(dconfig)
+    orig_config = sabnzbd.config.CFG.merge
+
+    # Now merge the wanted settings and compare
     sabnzbd.config.CFG.merge(options)
-
-    changed = sabnzbd.config.modified = cmp(orig_config, sabnzbd.config.CFG) == 0
+    changed = sabnzbd.config.modified = cmp(orig_config, sabnzbd.config.CFG) != 0
 
     if changed and not module.check_mode:
         if backup:
             module.backup_local(filename)
+
         try:
             sabnzbd.config.CFG.write()
-            sabnzbd.config.modified = False
         except:
-            module.fail_json(msg="Can't save SABnzbd config file %s: %s" % (filename, sys.exc_info()[0]))
+            module.fail_json(msg="Can't save SABnzbd config file %s: %s" % (
+                filename, sys.exc_info()[0]
+            ))
 
     return changed
 
@@ -138,7 +160,6 @@ def do_config(module, filename, libdir=None, options=None, backup=False):
 # main
 
 def main():
-
     module = AnsibleModule(
         argument_spec = dict(
             dest = dict(required=True),

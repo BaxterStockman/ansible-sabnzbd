@@ -5,3 +5,15 @@
     dest: "/opt/sabnzbd/sabnzbd.ini"
     options: "{{ sabnzbd_config_settings }}"
 
+- name: set attributes of sabnzbd.ini
+  become: yes
+  file:
+    follow: "{{ sabnzbd_follow | default(omit) }}"
+    group: "{{ sabnzbd_group }}"
+    mode: "{{ sabnzbd_file_mode }}"
+    owner: "{{ sabnzbd_owner }}"
+    path: "{{ sabnzbd_config_src }}"
+    selevel: "{{ sabnzbd_selevel | default(omit) }}"
+    serole: "{{ sabnzbd_serole | default(omit) }}"
+    setype: "{{ sabnzbd_setype | default(omit) }}"
+    seuser: "{{ sabnzbd_seuser | default(omit) }}"

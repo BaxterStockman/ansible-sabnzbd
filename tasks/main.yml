@@ -7,25 +7,25 @@
     - pacman
     - packer
 
-- name: check whether sabnzbd.ini exists
-  stat:
-    path: "{{ sabnzbd_config_src }}"
-    follow: yes
-  register: sabnzbd_config_stat
-  tags:
-    - sabnzbd
-    - config
-    - generate
-
-- include: generate.yml
-  when: not sabnzbd_config_stat.stat.exists
-  tags:
-    - sabnzbd
-    - config
-    - generate
-
-    #- include: sabnzbd_config.yml
+    #- name: check whether sabnzbd.ini exists
+    #  stat:
+    #    path: "{{ sabnzbd_config_src }}"
+    #    follow: yes
+    #  register: sabnzbd_config_stat
     #  tags:
     #    - sabnzbd
     #    - config
-    #    - ini_file
+    #    - generate
+    #
+    #- include: generate.yml
+    #  when: not sabnzbd_config_stat.stat.exists
+    #  tags:
+    #    - sabnzbd
+    #    - config
+    #    - generate
+
+- include: sabnzbd_config.yml
+  tags:
+    - sabnzbd
+    - config
+    - ini_file
