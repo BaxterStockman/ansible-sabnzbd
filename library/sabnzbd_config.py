@@ -33,6 +33,7 @@ options:
   dest:
     description:
       - Path to C(sabnzbd.ini).
+      - If this file does not already exist, it will be created.
     required: no
     default: C(/opt/sabnzbd/sabnzbd.ini)
   libdir:
@@ -61,14 +62,21 @@ options:
   settings:
     description:
       - A hash of settings that will be merged into C(sabnzbd.ini).
-      - Top-level keys are section names, (almost) everything else are
-        C(option = value) pairs (see the 'Notes' section for the exception).
+      - Top-level keys are section names, (almost) everything else is a
+        C(option = value) pair (see the 'Notes' section for the exception).
   state:
     description:
       - The desired state of the section, option, or hash of settings.
+      - If I(state) is I(absent) and I(option) is not defined, the entire
+        I(section) will be removed.
+      - In batch mode, the I(settings) hash is merged recursively into any
+        existing SABnzbd options.  No state concerning I(settings) is
+        maintained between plays, so if you accidentally included C(frob=nozzle)
+        somewhere in your I(settings) hash, it's going to stay in
+        C(sabnzbd.ini) until you remove it with C(state=absent), or manually.
     required: no
-    default: "no"
-    choices: [ "yes", "no" ]
+    default: "batch"
+    choices: [ "present", "absent", "batch" ]
   backup:
     description:
       - Create a timestamped backup of the original C(sabnzbd.ini).
@@ -79,13 +87,18 @@ notes:
     - This module uses SABnzbd's library code for manipulating the
       configuration file, so SABnzbd must be installed and its libraries must
       be readable or the module will fail to run.
-    - If C(sabnzbd.ini) does not already exist, it will be created.
-    - SABnzbd recognizes some nested settings, e.g. C(categories), which can
-      contain arbitrary sub-categories, such as C([[movies]]), C([[tv]]), and
-      so on.  By using SABnzbd's own internal code for manipulating the
-      configuration file, this module should just Do The Right Thing.  However,
-      it is up to the caller to ensure, for example, that I(section) and
-      I(option) names are valid; no validation is performed by the module.
+    - SABnzbd does a fair bit of internal twiddling between (1) loading the
+      configuration file into a ConfigObj object, (2) translating configuration
+      file settings into its own internal database settings, and (3) merging that
+      database back into the ConfigObj object prior to writing out a new
+      configuration file.  This twiddling includes, but is far from limited to,
+      adding default values for the various C([categories]).  Rather than try to
+      re-implement SABnzbd's internal logic, this module instead tries its
+      hardest to rely on SABnzbd's own library routines.  But because so much of
+      the munging logic just described occurs within subroutines that
+      inextricably involve reading from and writing to disk, this module is very
+      heavy on the I/O -- every C(sabnzbd_config) task involves at least two
+      reads and two writes of C(sabnzbd.ini).  Batch mode helps cut down on this.
 
 requirements: [ sabnzbd ]
 
@@ -105,11 +118,12 @@ EXAMPLES = '''
 '''
 
 import sys
+import os
 
 # ==============================================================
 # SABnzbdConfigWrapper
 
-class SABnzbdConfigWrapper:
+class SABnzbdConfigWrapper(object):
     def __init__(self, module, filename, state='batch', libdir=None,
                  settings=None, section=None, option=None, value=None,
                  backup=False):
@@ -122,17 +136,19 @@ class SABnzbdConfigWrapper:
         self.section = section
         self.backup = backup
 
-        self.set_operation()
+        self.set_operation(state)
         self.set_libdir(libdir)
 
         try:
             sys.path.append(self.libdir)
             import sabnzbd.config
+            import sabnzbd.utils.configobj
         except:
             self.module.fail_json(msg="Can't load SABnzbd python libraries from %s"
                                   % libdir)
         else:
             self.sabconfig = sabnzbd.config
+            self.configobj = sabnzbd.utils.configobj
 
     def set_operation(self, state=None):
         if state is None:
@@ -147,7 +163,6 @@ class SABnzbdConfigWrapper:
 
     def set_libdir(self, libdir=None):
         if libdir is None:
-            import os
             libdir = os.path.dirname(self.filename)
         self.libdir = libdir
 
@@ -163,99 +178,113 @@ class SABnzbdConfigWrapper:
             self.module.fail_json(msg=("%s is not a valid state" % self.state))
 
     def run(self, *args, **kwargs):
-        # Load sabnzbd.ini
-        self.load_config()
+        # Store initial config
+        init_config_dict = self.get_config().dict()
 
-        # Execute the operation
+        # Execute the operation.  Write out the configuration file, then
+        # reload.  This is so that SABnzbd can do its internal twiddling with
+        # configuration values, rather than reimplement all that here.
         self.operation(*args, **kwargs)
+        self.write_config()
+        new_config_dict = self.get_config(reload=True).dict()
 
         # Determine whether a change occurred
-        changed = self.is_changed()
-
-        self.module.fail_json(msg=("changed: %s" % changed))
+        changed = self.is_changed(init_config_dict, new_config_dict)
 
         # Write out the configuration
-        self.save_config(changed)
+        self.finalize_config(changed)
 
         return changed
 
-    def load_config(self, filename=None):
+    def read_config(self, filename=None, reload=False):
         module = self.module
-
         if filename is None:
             filename = self.filename
 
         read_res = True
         read_msg = ''
         try:
+            if reload:
+                self.sabconfig.CFG.clear()
+
             read_res, read_msg = self.sabconfig.read_config(filename)
-        except:
-            module.fail_json(msg="Can't read SABnzbd config file %s: %s" % (
-                filename, sys.exc_info()[0]
-            ))
 
-        if not read_res:
+            if not read_res:
+                raise IOError(filename)
+        except:
             module.fail_json(msg="Can't read SABnzbd config file %s: %s" %
-                             (filename, read_msg))
+                                (filename, sys.exc_info()[0]))
 
-        # Merge the internal settings database into the object representing the
-        # INI file
-        got_dconfig = True
-        dconfig = None
-        try:
-            (got_dconfig, dconfig) = self.sabconfig.get_dconfig(None, None)
-        except:
-            module.fail_json(msg="Can't load SABnzbd database object %s: %s" %
-                             (filename, sys.exc_info()[0]))
+        # Annoying, but probably better than trying to reimplement the
+        # merging logic from sabnzbd.config.save_config()...
+        config_exists = os.path.isfile(filename)
+        self.save_config()
 
-        if not got_dconfig:
-            module.fail_json(msg="Can't load SABnzbd database object %s: %s" %
-                             filename)
+        # Remove the file if it wasn't here when we started.  That way there's
+        # nothing left hanging around if there's an error downstream of here.
+        if not config_exists:
+            try:
+                os.remove(self.filename)
+            except:
+                module.fail_json(msg="Can't remove SABnzbd config file %s: %s"
+                                    % (filename, sys.exc_info()[0]))
 
-        # Save the initial configuration.  Deep copy to avoid
-        # action-at-a-distance.
-        self.sabconfig.CFG.merge(dconfig)
-        #self.orig_config = self.sabconfig.CFG.copy()
-        self.orig_config = self.sabconfig.CFG.dict()
+        return self.sabconfig.CFG
 
-    def save_config(self, changed=None):
+    def get_config(self, filename=None, reload=False):
+        if (not hasattr(self, 'config')) or reload:
+            self.config = self.read_config(filename, reload)
+
+        return self.config
+
+    def finalize_config(self, changed):
         module = self.module
         filename = self.filename
 
-        if changed is None:
-            changed = self.is_changed()
-
-        # Do this or the .modified method will exit immediately
-        self.sabconfig.modified = changed
-
-        write_res = False
         if changed and not module.check_mode:
             if self.backup:
                 module.backup_local(filename)
-            try:
-                self.sabconfig.CFG.write()
-            except:
-                module.fail_json(msg="Can't save SABnzbd config file %s: %s" %
-                                 (filename, sys.exc_info()[0]))
 
-    def is_changed(self):
-        if self.orig_config is None:
-            return False
+            self.write_config()
 
-        self.module.fail_json(msg=("orig: %s\nnew: %s") % (self.orig_config, self.sabconfig.CFG.dict()))
+        return True
 
-        return (cmp(self.orig_config, self.sabconfig.CFG.dict()) != 0)
+    def write_config(self):
+        try:
+            self.config.write()
+        except IOError:
+            failmsg = "Failed to write SABnzbd configuration file %s" % filename
+            module.fail_json(msg=failmsg)
+
+    def save_config(self):
+        """ Wrapper for sabnzbd.config.save_config().  Forces saving by setting
+            sabnzbd.config.modified to True
+        """
+
+        # Do this or sabnzbd.config.save_config() method will exit immediately
+        self.sabconfig.modified = True
+
+        if not self.sabconfig.save_config():
+            module.fail_json(msg="Can't save SABnzbd config file %s: %s" %
+                                (filename, read_msg))
+
+        return True
+
+    def is_changed(self, left, right):
+        """ Nothing more complicated ATM
+        """
+        return (cmp(left, right) != 0)
 
     def do_present(self):
-        self.sabconfig.CFG.sections.append(self.section)
-        self.sabconfig.CFG.update({self.section: self.value})
+        pass
 
     def do_absent(self):
         pass
 
     def do_batch(self):
         # Now merge the wanted settings and compare
-        self.sabconfig.CFG.merge(self.settings)
+        self.get_config().merge(self.settings)
+        return self.config
 
 
 # ==============================================================
@@ -298,7 +327,6 @@ def main():
     file_args = module.load_file_common_arguments(module.params)
     changed = module.set_fs_attributes_if_different(file_args, changed)
 
-    # Mission complete
     module.exit_json(dest=dest, changed=changed, msg="OK")
 
 # import module snippets

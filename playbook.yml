@@ -15,10 +15,10 @@
         you:
           can: go
           with: this
+          blee: bloo
         categories:
           '*':
             priority: 1
-
 
       sabnzbd_config_fragments_dir: "{{ playbook_dir }}/fragments"
       sabnzbd_config_mode: '0644'
