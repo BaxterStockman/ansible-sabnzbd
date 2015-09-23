@@ -171,15 +171,20 @@ class SABnzbdConfigWrapper(object):
     def validate(self):
         state = self.state
 
+        failfmt = lambda a: "missing required arguments: %s" % ",".join(a)
+        missing = []
+
         if state == 'batch':
             if not isinstance(self.settings, dict):
-                self.module.fail_json(msg="missing Ghash of settings when state=batch")
-        elif state == 'present':
-            pass
-        elif state == 'absent':
-            pass
+                missing.append('settings')
+        elif state == 'present' or state == 'absent':
+            if self.section is None and self.option is None
+                missing.append('section/option')
         else:
             self.module.fail_json(msg=("%s is not a valid state" % self.state))
+
+        if not missing:
+                self.module.fail_json(msg=(failfmt(missing)))
 
     def run(self, *args, **kwargs):
         # Store initial config

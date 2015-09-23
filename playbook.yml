@@ -3,10 +3,10 @@
 - hosts: all
   roles:
     - role: sabnzbd
-      #      sabnzbd_config_settings:
-      #        misc:
-      #          port: 9090
-      #          https_port: 9095
+      sabnzbd_config_settings:
+        misc:
+          port: 9090
+          https_port: 9095
 
       sabnzbd_config_mode: '0644'
 
