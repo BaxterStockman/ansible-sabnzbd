@@ -10,3 +10,5 @@ sabnzbd_owner: sabnzbd
 sabnzbd_group: sabnzbd
 sabnzbd_file_mode: '0644'
 sabnzbd_dir_mode: '0755'
+
+sabnzbd_service_name: sabnzbd
