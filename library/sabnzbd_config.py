@@ -178,12 +178,12 @@ class SABnzbdConfigWrapper(object):
             if not isinstance(self.settings, dict):
                 missing.append('settings')
         elif state == 'present' or state == 'absent':
-            if self.section is None and self.option is None
+            if self.section is None and self.option is None:
                 missing.append('section/option')
         else:
             self.module.fail_json(msg=("%s is not a valid state" % self.state))
 
-        if not missing:
+        if missing:
                 self.module.fail_json(msg=(failfmt(missing)))
 
     def run(self, *args, **kwargs):

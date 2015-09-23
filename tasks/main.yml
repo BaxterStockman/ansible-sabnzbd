@@ -12,3 +12,5 @@
     - sabnzbd
     - config
     - ini_file
+
+- include: service.yml
