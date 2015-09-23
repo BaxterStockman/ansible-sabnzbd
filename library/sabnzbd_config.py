@@ -139,6 +139,8 @@ class SABnzbdConfigWrapper(object):
         self.set_operation(state)
         self.set_libdir(libdir)
 
+        self.validate()
+
         try:
             sys.path.append(self.libdir)
             import sabnzbd.config
@@ -167,13 +169,15 @@ class SABnzbdConfigWrapper(object):
         self.libdir = libdir
 
     def validate(self):
+        state = self.state
+
         if state == 'batch':
             if not isinstance(self.settings, dict):
-                self.module.fail_json(msg="must provide a hash of settings when state=batch")
+                self.module.fail_json(msg="missing Ghash of settings when state=batch")
         elif state == 'present':
-            self.operation = self.do_present
+            pass
         elif state == 'absent':
-            self.operation = self.do_absent
+            pass
         else:
             self.module.fail_json(msg=("%s is not a valid state" % self.state))
 
@@ -295,7 +299,7 @@ def main():
         argument_spec = dict(
             dest     = dict(required=True),
             libdir   = dict(required=False),
-            settings = dict(required=True),
+            settings = dict(required=False),
             section  = dict(required=False),
             option   = dict(required=False),
             value    = dict(required=False),

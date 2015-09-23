@@ -3,7 +3,7 @@
   become: yes
   sabnzbd_config:
     dest: "/opt/sabnzbd/sabnzbd.ini"
-    settings: "{{ sabnzbd_config_settings }}"
+    settings: "{{ sabnzbd_config_settings | default(omit) }}"
     follow: "{{ sabnzbd_follow | default(omit) }}"
     group: "{{ sabnzbd_group }}"
     mode: "{{ sabnzbd_file_mode }}"

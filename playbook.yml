@@ -3,23 +3,10 @@
 - hosts: all
   roles:
     - role: sabnzbd
-      sabnzbd_config_settings:
-        misc:
-          port: 8889
-        one:
-          tiw: free
-        this:
-          that: what
-        whoza:
-          black: sheep
-        you:
-          can: go
-          with: this
-          blee: bloo
-        categories:
-          '*':
-            priority: 1
+      #      sabnzbd_config_settings:
+      #        misc:
+      #          port: 9090
+      #          https_port: 9095
 
-      sabnzbd_config_fragments_dir: "{{ playbook_dir }}/fragments"
       sabnzbd_config_mode: '0644'
 
