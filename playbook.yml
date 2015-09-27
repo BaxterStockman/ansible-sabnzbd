@@ -12,7 +12,15 @@
 
       sabnzbd_config_mode: '0644'
   tasks:
-    - name: delete blee
+    - name: add something to new section
+      become: true
+      sabnzbd_config:
+        dest: "/opt/sabnzbd/sabnzbd.ini"
+        section: blee
+        option: gross
+        value: dude
+        state: present
+    - name: delete from blee
       become: true
       sabnzbd_config:
         dest: "/opt/sabnzbd/sabnzbd.ini"
@@ -21,14 +29,6 @@
           - blee
           - froo
         state: absent
-    - name: add something to existing section
-      become: true
-      sabnzbd_config:
-        dest: "/opt/sabnzbd/sabnzbd.ini"
-        section: blee
-        option: gross
-        value: dude
-        state: present
     - name: add something to new section
       become: true
       sabnzbd_config:
@@ -41,10 +41,8 @@
       become: true
       sabnzbd_config:
         dest: "/opt/sabnzbd/sabnzbd.ini"
-        section: categories
+        section: meh
         option:
-          tv: priority
+          moo: mah
         state: absent
-
-
 

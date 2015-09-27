@@ -132,8 +132,10 @@ EXAMPLES = '''
     ensure: absent
 '''
 
-import sys
 import os
+import sys
+import shutil
+import tempfile
 
 # ==============================================================
 # SABnzbdConfigWrapper
@@ -151,6 +153,20 @@ class SABnzbdConfigWrapper(object):
         self.section = section
         self.backup = backup
 
+        # Backup filename for restoration in case of error
+        self.temp_filename = tempfile.mktemp()
+
+        # Try to create a backup file, ignoring errors errors, since the source
+        # file might not exist yet.
+        if not os.path.exists(self.temp_filename):
+            try:
+                shutil.copy2(filename, self.temp_filename)
+            except (OSError, IOError):
+                pass
+            except Exception as err:
+                module.fail_json(msg="Error backing up SABnzbd configuration %s: %s"
+                                 % (filename, str(err)))
+
         self.set_operation(state)
         self.set_libdir(libdir)
 
@@ -166,6 +182,35 @@ class SABnzbdConfigWrapper(object):
         else:
             self.sabconfig = sabnzbd.config
             self.configobj = sabnzbd.utils.configobj
+
+    def cleanup(self, changed):
+        filename = self.filename
+        module = self.module
+
+        if module.check_mode:
+            module.exit_json(msg="would clean up", temp_filename=self.temp_filename)
+            # Try to restore backup file
+            try:
+                shutil.move(self.temp_filename)
+            except:
+                # Assume that failure to restore the file indicates that no
+                # backup was made because no file existed at the start of the
+                # run.
+                try:
+                    os.remove(filename)
+                except Exception as err:
+                    module.fail_json(msg="Can't remove SABnzbd config file %s: %s"
+                                          % (filename, str(err)))
+            return False
+        else:
+            if changed:
+                if self.backup:
+                    module.backup_local(filename)
+
+                self.write_config()
+
+            file_args = module.load_file_common_arguments(module.params)
+            return module.set_fs_attributes_if_different(file_args, changed)
 
     def set_operation(self, state=None):
         if state is None:
@@ -213,10 +258,8 @@ class SABnzbdConfigWrapper(object):
         # Determine whether a change occurred
         changed = self.is_changed(init_config_dict, new_config_dict)
 
-        # Write out the configuration
-        self.finalize_config(changed)
-
-        return changed
+        # Write out the configuration, if not in check_mode
+        return self.cleanup(changed)
 
     def read_config(self, filename=None, reload=False):
         module = self.module
@@ -239,17 +282,7 @@ class SABnzbdConfigWrapper(object):
 
         # Annoying, but probably better than trying to reimplement the
         # merging logic from sabnzbd.config.save_config()...
-        config_exists = os.path.isfile(filename)
         self.save_config()
-
-        # Remove the file if it wasn't here when we started.  That way there's
-        # nothing left hanging around if there's an error downstream of here.
-        if not config_exists:
-            try:
-                os.remove(self.filename)
-            except Exception as err:
-                module.fail_json(msg="Can't remove SABnzbd config file %s: %s"
-                                    % (filename, str(err)))
 
         return self.sabconfig.CFG
 
@@ -258,18 +291,6 @@ class SABnzbdConfigWrapper(object):
             self.config = self.read_config(filename, reload)
 
         return self.config
-
-    def finalize_config(self, changed):
-        module = self.module
-        filename = self.filename
-
-        if changed and not module.check_mode:
-            if self.backup:
-                module.backup_local(filename)
-
-            self.write_config()
-
-        return True
 
     def write_config(self):
         try:
@@ -375,9 +396,6 @@ def main():
                                   backup=backup)
 
     changed = config.run(section=section, option=option, value=value, settings=settings)
-
-    file_args = module.load_file_common_arguments(module.params)
-    changed = module.set_fs_attributes_if_different(file_args, changed)
 
     module.exit_json(dest=dest, changed=changed, msg="OK")
 
