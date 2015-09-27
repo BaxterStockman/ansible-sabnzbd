@@ -7,6 +7,44 @@
         misc:
           port: 9090
           https_port: 9095
+          username: humphrey
+          password: dontbogart
 
       sabnzbd_config_mode: '0644'
+  tasks:
+    - name: delete blee
+      become: true
+      sabnzbd_config:
+        dest: "/opt/sabnzbd/sabnzbd.ini"
+        section: blee
+        option:
+          - blee
+          - froo
+        state: absent
+    - name: add something to existing section
+      become: true
+      sabnzbd_config:
+        dest: "/opt/sabnzbd/sabnzbd.ini"
+        section: blee
+        option: gross
+        value: dude
+        state: present
+    - name: add something to new section
+      become: true
+      sabnzbd_config:
+        dest: "/opt/sabnzbd/sabnzbd.ini"
+        section: yertle
+        option: turtles
+        value: all the way down
+        state: present
+    - name: delete priority from tv
+      become: true
+      sabnzbd_config:
+        dest: "/opt/sabnzbd/sabnzbd.ini"
+        section: categories
+        option:
+          tv: priority
+        state: absent
+
+
 

@@ -11,14 +11,14 @@ TODO
 Example Playbook
 ----------------
 
-Please see `playbook.yml`
+Please see `playbook.yml` for example usage.
 
 License
 -------
 
-BSD
+GPLv3
 
 Author Information
 ------------------
 
-[https://github.com/BaxterStockman](Matt Schreiber)
+[Matt Schreiber](https://github.com/BaxterStockman)
