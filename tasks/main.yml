@@ -11,6 +11,8 @@
   tags:
     - sabnzbd
     - config
-    - ini_file
 
 - include: service.yml
+  tags:
+    - sabnzbd
+    - service

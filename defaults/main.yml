@@ -1,10 +1,7 @@
 ---
 # defaults file for sabnzbd
 sabnzbd_homedir: /opt/sabnzbd
-sabnzbd_config_src: "{{ sabnzbd_homedir }}/sabnzbd.ini"
-sabnzbd_config_dest: /tmp/ansible-sabnzbd
-sabnzbd_config_fail_on_missing: no
-sabnzbd_config_validate_checksum: yes
+sabnzbd_config_dest: "{{ sabnzbd_homedir }}/sabnzbd.ini"
 
 sabnzbd_owner: sabnzbd
 sabnzbd_group: sabnzbd

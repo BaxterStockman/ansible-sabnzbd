@@ -2,7 +2,7 @@
 - name: add options to sabnzbd.ini
   become: yes
   sabnzbd_config:
-    dest: "/opt/sabnzbd/sabnzbd.ini"
+    dest: "{{ sabnzbd_config_dest }}"
     settings: "{{ sabnzbd_config_settings | default(omit) }}"
     follow: "{{ sabnzbd_follow | default(omit) }}"
     group: "{{ sabnzbd_group }}"

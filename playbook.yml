@@ -9,7 +9,9 @@
           https_port: 9095
           username: humphrey
           password: dontbogart
-      sabnzbd_config_mode: '0644'
+      sabnzbd_file_mode: '0644'
+      sabnzbd_service_enabled: no
+      sabnzbd_service_state: stopped
   tasks:
     - name: add setting to existing section
       become: true
