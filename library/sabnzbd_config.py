@@ -188,10 +188,9 @@ class SABnzbdConfigWrapper(object):
         module = self.module
 
         if module.check_mode:
-            module.exit_json(msg="would clean up", temp_filename=self.temp_filename)
             # Try to restore backup file
             try:
-                shutil.move(self.temp_filename)
+                shutil.move(self.temp_filename, filename)
             except:
                 # Assume that failure to restore the file indicates that no
                 # backup was made because no file existed at the start of the
@@ -201,7 +200,7 @@ class SABnzbdConfigWrapper(object):
                 except Exception as err:
                     module.fail_json(msg="Can't remove SABnzbd config file %s: %s"
                                           % (filename, str(err)))
-            return False
+            return changed
         else:
             if changed:
                 if self.backup:
