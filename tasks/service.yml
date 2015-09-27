@@ -1,5 +1,5 @@
 ---
-- name: enable sabnzbd service
+- name: configure sabnzbd service
   service:
     arguments: "{{ sabnzbd_service_arguments | default(omit) }}"
     enabled: "{{ sabnzbd_service_enabled | default(omit) | bool }}"

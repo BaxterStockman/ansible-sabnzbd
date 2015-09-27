@@ -367,12 +367,12 @@ def main():
         argument_spec = dict(
             dest     = dict(required=True),
             libdir   = dict(required=False),
-            settings = dict(required=False),
-            section  = dict(required=False),
+            settings = dict(required=False, type='dict'),
+            section  = dict(required=False, type='str'),
             option   = dict(required=False),
             value    = dict(required=False),
             backup   = dict(default='no', type='bool'),
-            state    = dict(default='batch')
+            state    = dict(default='batch', choices=['batch', 'absent', 'present'])
         ),
         add_file_common_args = True,
         supports_check_mode = True
