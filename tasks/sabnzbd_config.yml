@@ -12,3 +12,6 @@
     serole: "{{ sabnzbd_serole | default(omit) }}"
     setype: "{{ sabnzbd_setype | default(omit) }}"
     seuser: "{{ sabnzbd_seuser | default(omit) }}"
+  tags:
+    - sabnzbd
+    - config

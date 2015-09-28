@@ -9,3 +9,6 @@
     sleep: "{{ sabnzbd_service_sleep | default(omit) }}"
     state: "{{ sabnzbd_service_state | default(omit) }}"
   become: yes
+  tags:
+    - sabnzbd
+    - service
