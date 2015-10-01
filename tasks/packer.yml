@@ -3,7 +3,6 @@
   packer:
     name: "{{ sabnzbd_pkg_name | default('sabnzbd') }}"
     state: "{{ sabnzbd_pkg_state | default('present') }}"
-  become: yes
   tags:
     - sabnzbd
     - pacman
