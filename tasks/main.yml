@@ -3,7 +3,7 @@
 - include: packer.yml
   when: ansible_pkg_mgr == 'pacman'
   tags:
-    - sabznbd
+    - sabnzbd
     - pacman
     - packer
 
