@@ -12,6 +12,7 @@
       sabnzbd_file_mode: '0644'
       sabnzbd_service_enabled: no
       sabnzbd_service_state: stopped
+      become: true
   tasks:
     - name: add setting to existing section
       become: true

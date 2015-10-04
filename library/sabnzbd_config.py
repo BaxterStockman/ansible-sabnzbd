@@ -164,7 +164,7 @@ class SABnzbdConfigWrapper(object):
             except (OSError, IOError):
                 pass
             except Exception as err:
-                module.fail_json(msg="Error backing up SABnzbd configuration %s: %s"
+                self.module.fail_json(msg="Error backing up SABnzbd configuration %s: %s"
                                  % (filename, str(err)))
 
         self.set_operation(state)
@@ -184,13 +184,10 @@ class SABnzbdConfigWrapper(object):
             self.configobj = sabnzbd.utils.configobj
 
     def cleanup(self, changed):
-        filename = self.filename
-        module = self.module
-
-        if module.check_mode:
+        if self.module.check_mode:
             # Try to restore backup file
             try:
-                shutil.move(self.temp_filename, filename)
+                shutil.move(self.temp_filename, self.filename)
             except:
                 # Assume that failure to restore the file indicates that no
                 # backup was made because no file existed at the start of the
@@ -198,18 +195,18 @@ class SABnzbdConfigWrapper(object):
                 try:
                     os.remove(filename)
                 except Exception as err:
-                    module.fail_json(msg="Can't remove SABnzbd config file %s: %s"
-                                          % (filename, str(err)))
+                    self.module.fail_json(msg="Can't remove SABnzbd config file %s: %s"
+                                          % (self.filename, str(err)))
             return changed
         else:
             if changed:
                 if self.backup:
-                    module.backup_local(filename)
+                    self.module.backup_local(filename)
 
                 self.write_config()
 
-            file_args = module.load_file_common_arguments(module.params)
-            return module.set_fs_attributes_if_different(file_args, changed)
+            file_args = self.module.load_file_common_arguments(self.module.params)
+            return self.module.set_fs_attributes_if_different(file_args, changed)
 
     def set_operation(self, state=None):
         if state is None:
@@ -228,16 +225,19 @@ class SABnzbdConfigWrapper(object):
         self.libdir = libdir
 
     def validate(self):
-        state = self.state
-
         missing = []
 
-        if state == 'batch':
+        if self.state == 'batch':
             if not isinstance(self.settings, dict):
                 missing.append('settings')
-        elif state == 'present' or state == 'absent':
-            if self.section is None and self.option is None:
-                missing.append('section', 'option')
+        elif self.state == 'present':
+            if self.section is None:
+                missing.append('section')
+            if self.option is None:
+                missing.append('option')
+        elif self.state == 'absent':
+            if self.section is None:
+                missing.append('section')
 
         if missing:
             self.module.fail_json(msg="Missing required arguments: %s" %
@@ -261,7 +261,6 @@ class SABnzbdConfigWrapper(object):
         return self.cleanup(changed)
 
     def read_config(self, filename=None, reload=False):
-        module = self.module
         if filename is None:
             filename = self.filename
 
@@ -276,8 +275,8 @@ class SABnzbdConfigWrapper(object):
             if not read_res:
                 raise IOError(filename)
         except Exception as err:
-            module.fail_json(msg="Can't read SABnzbd config file %s: %s" %
-                                (filename, sys.exc_info()[0]))
+            self.module.fail_json(msg="Can't read SABnzbd config file %s: %s" %
+                                (filename, str(err)))
 
         # Annoying, but probably better than trying to reimplement the
         # merging logic from sabnzbd.config.save_config()...
@@ -286,6 +285,9 @@ class SABnzbdConfigWrapper(object):
         return self.sabconfig.CFG
 
     def get_config(self, filename=None, reload=False):
+        if filename is None:
+            filename = self.filename
+
         if (not hasattr(self, 'config')) or reload:
             self.config = self.read_config(filename, reload)
 
@@ -295,7 +297,7 @@ class SABnzbdConfigWrapper(object):
         try:
             self.config.write()
         except IOError as err:
-            module.fail_json(msg="Failed to write SABnzbd configuration file %s: %s"
+            self.module.fail_json(msg="Failed to write SABnzbd configuration file %s: %s"
                              % (filename, str(err)))
 
     def save_config(self):
