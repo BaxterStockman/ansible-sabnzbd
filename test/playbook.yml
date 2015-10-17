@@ -1,4 +1,13 @@
 ---
+# For travis runs, need to do a no-op inclusion of the packer 'role' (really
+# it's a module) to avoid a bunch of shenanigans with copying/linking files
+# into ANSIBLE_LIBRARY, etc.
+- hosts: travis
+  roles:
+    - role: packer
+      changed_when: false
+      ignore_errors: yes
+
 # Sample playbook for sabnzbd role
 - hosts: all
   roles:
