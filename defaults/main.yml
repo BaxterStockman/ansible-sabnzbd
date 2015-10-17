@@ -3,9 +3,16 @@
 sabnzbd_homedir: /opt/sabnzbd
 sabnzbd_config_dest: "{{ sabnzbd_homedir }}/sabnzbd.ini"
 
+sabnzbd_pkg_state: present
+
 sabnzbd_owner: sabnzbd
 sabnzbd_group: sabnzbd
 sabnzbd_file_mode: '0644'
 sabnzbd_dir_mode: '0755'
 
 sabnzbd_service_name: sabnzbd
+
+sabnzbd_service_restarted: no
+sabnzbd_service_restarted_on_change: no
+
+

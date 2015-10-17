@@ -1,0 +1,8 @@
+---
+- name: install sabnzbd
+  apt:
+    name: "{{ sabnzbd_pkg_name }}"
+    state: "{{ sabnzbd_pkg_state }}"
+  tags:
+    - sabnzbd
+    - apt

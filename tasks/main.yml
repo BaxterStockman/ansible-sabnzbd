@@ -1,5 +1,14 @@
 ---
 # tasks file for sabnzbd
+
+- include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_distribution }}.yml"
+    - "{{ ansible_os_family }}.yml"
+    - "{{ ansible_pkg_mgr | replace('pacman', 'packer') }}.yml"
+  tags:
+    - always
+
 - include: packer.yml
   when: ansible_pkg_mgr == 'pacman'
   tags:
@@ -7,12 +16,34 @@
     - pacman
     - packer
 
-- include: sabnzbd_config.yml
+- include: apt.yml
+  when: ansible_pkg_mgr == 'apt'
+  tags:
+    - sabnzbd
+    - pacman
+    - packer
+
+- name: get pre-run stat of sabnzbd config
+  stat:
+    follow: "{{ sabnzbd_config_follow | default(omit) }}"
+    get_checksum: yes
+    path: "{{ sabnzbd_config_dest }}"
+  register: sabnzbd_config_st_pre
+  when: sabnzbd_service_restarted_on_change | bool
+  changed_when: sabnzbd_service_restarted_on_change | bool
+  notify: get post-run stat of sabnzbd config
   tags:
     - sabnzbd
     - config
+    - service
 
 - include: service.yml
   tags:
     - sabnzbd
     - service
+
+- name: notify sabnzbd service restart handler
+  debug: notify sabnzbd service restart handler
+  when: sabnzbd_service_restarted | bool
+  changed_when: sabnzbd_service_restarted | bool
+  notify: restart sabnzbd service

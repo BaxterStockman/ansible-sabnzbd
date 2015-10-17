@@ -3,19 +3,13 @@
 - hosts: all
   roles:
     - role: sabnzbd
-      sabnzbd_config_settings:
-        misc:
-          port: 9090
-          https_port: 9095
-          username: humphrey
-          password: dontbogart
       sabnzbd_file_mode: '0644'
       sabnzbd_service_enabled: no
       sabnzbd_service_state: stopped
-      become: true
+      become: yes
   tasks:
     - name: add setting to existing section
-      become: true
+      become: yes
       sabnzbd_config:
         dest: "/opt/sabnzbd/sabnzbd.ini"
         section: misc
@@ -23,22 +17,25 @@
         value: asa3dollarbill
         state: present
     - name: add setting to new section
-      become: true
+      become: yes
       sabnzbd_config:
         dest: "/opt/sabnzbd/sabnzbd.ini"
         section: yertle
         option: turtles
         value: all the way down
         state: present
+
+- hosts: localhost
+  tasks:
     - name: delete setting
-      become: true
+      become: yes
       sabnzbd_config:
         dest: "/opt/sabnzbd/sabnzbd.ini"
         section: misc
         option: fake
         state: absent
     - name: delete section
-      become: true
+      become: yes
       sabnzbd_config:
         dest: "/opt/sabnzbd/sabnzbd.ini"
         section: yertle

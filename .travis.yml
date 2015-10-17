@@ -3,6 +3,9 @@
 language: python
 python: "2.7"
 
+# Need this in order to install packages, restart services, etc.
+sudo: required
+
 env:
     - SITE=playbook.yml
 
@@ -10,26 +13,24 @@ install:
     # Install ansible
     - pip install --upgrade pip
     - pip install ansible
+    - .travis/install.sh
 
 before_script:
-    # Ensure that Ansible recognizes the short-form role name, rather than the
-    # name of the GitHub repo.  For instance, $PWD/../ansible-role-nginx gets
-    # symlinked to $PWD/../nginx so the playbook can contain "role: nginx".
-    - >
-        bash -c 'basename="${PWD##*/}" ; \
-            role_name="${basename##*-}" ; \
-            ln -sf "$basename" ../"$role_name"'
+    - sudo apt-get update -qq
+    - .travis/before_script.sh
 
 script:
     # Check syntax
     - "ansible-playbook -l travis test/$SITE --syntax-check"
 
     # Run the role/playbook with ansible-playbook
-    - "ansible-playbook -l travis test/$SITE"
+    - "ansible-playbook -l travis test/$SITE --become"
 
-    # Run the role/playbook again, checking for idempotence
+    # Run the role/playbook again, checking for idempotence.
+    # Allow 2 tasks to be marked as changed -- these are the `stat` tasks that
+    # we want to always trigger handlers.
     - >
-        if ansible-playbook -l travis test/$SITE | grep -q "changed=0.*failed=0"; then
+        if ansible-playbook -l travis test/$SITE --become | grep -q "changed=0.*failed=0"; then
             echo "Idempotence test: pass"
             exit 0
         else

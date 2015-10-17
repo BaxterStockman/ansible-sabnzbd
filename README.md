@@ -11,7 +11,7 @@ TODO
 Example Playbook
 ----------------
 
-Please see `playbook.yml` for example usage.
+Please see [`test/playbook.yml`](test/playbook.yml) for example usage.
 
 License
 -------

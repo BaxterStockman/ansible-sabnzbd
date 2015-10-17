@@ -104,21 +104,7 @@ galaxy_info:
   # the platforms above, uncomment those that apply to your role.
   #
 categories:
-  #- cloud
-  #- cloud:ec2
-  #- cloud:gce
-  #- cloud:rax
-  #- clustering
-  #- database
-  #- database:nosql
-  #- database:sql
-  #- development
-  #- monitoring
-  #- networking
-  #- packaging
-  #- system
   - web
 # NOTE you'll need the packer module installed if you want to install the
 # sabnzbd AUR package
 dependencies: []
-
