@@ -20,7 +20,7 @@
     - name: add setting to existing section
       become: yes
       sabnzbd_config:
-        dest: "/opt/sabnzbd/sabnzbd.ini"
+        dest: "{{ sabnzbd_config_dest }}"
         section: misc
         option: fake
         value: asa3dollarbill
@@ -28,7 +28,7 @@
     - name: add setting to new section
       become: yes
       sabnzbd_config:
-        dest: "/opt/sabnzbd/sabnzbd.ini"
+        dest: "{{ sabnzbd_config_dest }}"
         section: yertle
         option: turtles
         value: all the way down
