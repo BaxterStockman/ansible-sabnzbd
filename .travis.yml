@@ -20,8 +20,6 @@ before_script:
     - .travis/before_script.sh
     - ansible-galaxy install -r test/requirements.yml
     - sudo apt-get install apt-file
-    - sudo apt-file update
-    - apt-file list sabnzbdplus
 
 script:
     # Check syntax
@@ -42,3 +40,6 @@ script:
             exit 1
         fi
 
+after_script:
+    - sudo apt-file update
+    - apt-file list sabnzbdplus
