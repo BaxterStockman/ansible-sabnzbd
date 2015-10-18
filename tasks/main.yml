@@ -1,18 +1,18 @@
 ---
 # tasks file for sabnzbd
 
-- name: include OS family vars
-  include_vars: "{{ item }}"
-  with_first_found:
-    - "{{ ansible_os_family }}.yml"
-    - dummy.yml
-  tags:
-    - always
-
 - name: include package manager vars
   include_vars: "{{ item }}"
   with_first_found:
     - "{{ ansible_pkg_mgr | replace('pacman', 'packer') }}.yml"
+    - dummy.yml
+  tags:
+    - always
+
+- name: include OS family vars
+  include_vars: "{{ item }}"
+  with_first_found:
+    - "{{ ansible_os_family }}.yml"
     - dummy.yml
   tags:
     - always
@@ -36,7 +36,14 @@
   when: ansible_pkg_mgr == 'apt'
   tags:
     - sabnzbd
-    - pacman
+    - apt
+    - packer
+
+- include: yum.yml
+  when: ansible_pkg_mgr == 'yum'
+  tags:
+    - sabnzbd
+    - yum
     - packer
 
 - name: get pre-run stat of sabnzbd config
