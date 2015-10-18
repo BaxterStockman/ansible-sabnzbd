@@ -19,6 +19,9 @@ before_script:
     - sudo apt-get update -qq
     - .travis/before_script.sh
     - ansible-galaxy install -r test/requirements.yml
+    - sudo apt-get install apt-file
+    - sudo apt-file update
+    - apt-file list sabnzbdplus
 
 script:
     # Check syntax
