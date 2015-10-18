@@ -1,0 +1,7 @@
+---
+# Dummy vars file.  Used so that we can do
+# include_vars: "{{ item }}.yml"
+# with_first_found:
+#   - i_do_not_exist
+#   - dummy
+# without breaking stuff
