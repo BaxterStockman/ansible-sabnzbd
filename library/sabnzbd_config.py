@@ -180,7 +180,6 @@ class SABnzbdConfigWrapper(object):
                                   % (libdir, str(err)))
         else:
             self.sabconfig = sabnzbd.config
-            self.configobj = sabnzbd.utils.configobj
 
         # Some versions of SABnzbd (e.g. the one available through jcfp's
         # Ubuntu PPA) don't fatpack configobj with the sabnzbd python
