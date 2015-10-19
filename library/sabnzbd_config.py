@@ -177,7 +177,7 @@ class SABnzbdConfigWrapper(object):
             import sabnzbd.config
         except Exception as err:
             self.module.fail_json(msg="Can't load SABnzbd python libraries from %s: %s"
-                                  % (libdir, str(err)))
+                                  % (self.libdir, str(err)))
         else:
             self.sabconfig = sabnzbd.config
 
