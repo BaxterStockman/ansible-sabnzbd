@@ -175,12 +175,27 @@ class SABnzbdConfigWrapper(object):
         try:
             sys.path.append(self.libdir)
             import sabnzbd.config
-            import sabnzbd.utils.configobj
         except Exception as err:
             self.module.fail_json(msg="Can't load SABnzbd python libraries from %s: %s"
                                   % (libdir, str(err)))
         else:
             self.sabconfig = sabnzbd.config
+            self.configobj = sabnzbd.utils.configobj
+
+        # Some versions of SABnzbd (e.g. the one available through jcfp's
+        # Ubuntu PPA) don't fatpack configobj with the sabnzbd python
+        # libraries.  These versions load configobj from the existing sys.path,
+        # so we try that if the first import fails.
+        try:
+            import sabnzbd.utils.configobj
+        except Exception:
+            try:
+                import configobj
+            except Exception as err:
+                self.module.fail_json(msg="Can't load the configobj python library: %s" % str(err))
+            else:
+                self.configobj = configobj
+        else:
             self.configobj = sabnzbd.utils.configobj
 
     def cleanup(self, changed):
