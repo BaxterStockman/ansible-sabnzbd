@@ -137,10 +137,19 @@ import sys
 import shutil
 import tempfile
 
+def assign(d, k):
+    def make_assignment(f):
+        d.setdefault(k, f)
+        return f
+    return make_assignment
+
 # ==============================================================
 # SABnzbdConfigWrapper
 
 class SABnzbdConfigWrapper(object):
+
+    dispatch_table = {}
+
     def __init__(self, module, filename, state='batch', libdir=None,
                  settings=None, section=None, option=None, value=None,
                  backup=False):
@@ -167,7 +176,6 @@ class SABnzbdConfigWrapper(object):
                 self.module.fail_json(msg="Error backing up SABnzbd configuration %s: %s"
                                  % (filename, str(err)))
 
-        self.set_operation(state)
         self.set_libdir(libdir)
 
         self.validate()
@@ -222,16 +230,9 @@ class SABnzbdConfigWrapper(object):
             file_args = self.module.load_file_common_arguments(self.module.params)
             return self.module.set_fs_attributes_if_different(file_args, changed)
 
-    def set_operation(self, state=None):
-        if state is None:
-            state = self.state
-
-        if state == 'batch':
-            self.operation = self.do_batch
-        elif state == 'present':
-            self.operation = self.do_present
-        elif state == 'absent':
-            self.operation = self.do_absent
+    def dispatch(self, state, *args, **kwargs):
+        op = self.dispatch_table[state].__get__(self, type(self))
+        return op(*args, **kwargs)
 
     def set_libdir(self, libdir=None):
         if libdir is None:
@@ -255,7 +256,7 @@ class SABnzbdConfigWrapper(object):
 
         if missing:
             self.module.fail_json(msg="Missing required arguments: %s" %
-                                  ','.join(missing))
+                                  ', '.join(missing))
 
     def run(self, *args, **kwargs):
         # Store initial config
@@ -264,7 +265,7 @@ class SABnzbdConfigWrapper(object):
         # Execute the operation.  Write out the configuration file, then
         # reload.  This is so that SABnzbd can do its internal twiddling with
         # configuration values, rather than reimplement all that here.
-        self.operation(*args, **kwargs)
+        self.dispatch(self.state, *args, **kwargs)
         self.write_config()
         new_config_dict = self.get_config(reload=True).dict()
 
@@ -333,6 +334,7 @@ class SABnzbdConfigWrapper(object):
         """
         return (cmp(left, right) != 0)
 
+    @assign(dispatch_table, 'present')
     def do_present(self, settings=None, section=None, option=None, value=None, config=None):
         if config is None:
             config = self.get_config()
@@ -342,6 +344,7 @@ class SABnzbdConfigWrapper(object):
         except KeyError:
             config[section] = {option: value}
 
+    @assign(dispatch_table, 'absent')
     def do_absent(self, settings=None, section=None, option=None, value=None, config=None):
         if config is None:
             config = self.get_config()
@@ -367,6 +370,7 @@ class SABnzbdConfigWrapper(object):
                 self.module.fail_json(msg="Don't understand how to handle option type: %s" %
                                       option.__class__.__name__)
 
+    @assign(dispatch_table, 'batch')
     def do_batch(self, settings=None, section=None, option=None, value=None, config=None):
         if settings is None:
             settings = self.settings
