@@ -1,3 +1,2 @@
 ---
-sabnzbd_pkg_name: sabnzbd
-sabnzbd_service_name: sabnzbd
+sabnzbd_pkg: sabnzbd

@@ -3,4 +3,3 @@
   yum:
     name: "{{ sabnzbd_release_pkg_url }}"
     state: present
-

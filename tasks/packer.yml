@@ -1,9 +1,5 @@
 ---
 - name: install sabnzbd
   packer:
-    name: "{{ sabnzbd_pkg_name | default('sabnzbd') }}"
-    state: "{{ sabnzbd_pkg_state | default('present') }}"
-  tags:
-    - sabnzbd
-    - pacman
-    - packer
+    name: "{{ sabnzbd_pkg | default('sabnzbd') }}"
+    state: present

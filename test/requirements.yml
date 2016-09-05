@@ -1,5 +1,0 @@
-- src: https://github.com/BaxterStockman/ansible-packer.git
-  # TODO remove this once PR is accepted by upstream
-  version: remotes/origin/galaxy
-  name: packer
-

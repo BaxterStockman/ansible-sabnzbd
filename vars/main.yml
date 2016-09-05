@@ -1,6 +1,2 @@
 ---
 # vars file for sabnzbd
-
-sabnzbd_pacman_package: sabnzbd
-
-# vi: ft=ansible

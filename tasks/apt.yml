@@ -2,27 +2,16 @@
 - name: install python-apt
   apt:
     name: python-apt
-    state: latest
+    state: present
     update_cache: yes
-  when: sabnzbd_pkg_state != 'absent'
-  tags:
-    - sabnzbd
-    - apt
 
 - name: install sabnzbd repository
   apt_repository:
     repo: 'ppa:jcfp/ppa'
-    state: "{{ sabnzbd_pkg_state }}"
-  when: sabnzbd_pkg_state != 'absent'
-  tags:
-    - sabnzbd
-    - apt
+    state: present
 
 - name: install sabnzbd
   apt:
-    name: "{{ sabnzbd_pkg_name }}"
-    state: "{{ sabnzbd_pkg_state }}"
-    update_cache: "{{ sabnzbd_pkg_state != 'absent' | ternary('yes', 'no') }}"
-  tags:
-    - sabnzbd
-    - apt
+    name: "{{ sabnzbd_pkg }}"
+    state: present
+    update_cache: yes

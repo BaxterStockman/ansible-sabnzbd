@@ -7,8 +7,8 @@
 
 - name: install sabnzbd
   yum:
-    name: "{{ sabnzbd_pkg_name }}"
-    state: "{{ sabnzbd_pkg_state }}"
+    name: "{{ sabnzbd_pkg }}"
+    state: present
   tags:
     - sabnzbd
     - apt

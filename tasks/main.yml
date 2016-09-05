@@ -1,72 +1,54 @@
 ---
 # tasks file for sabnzbd
 
-- name: include package manager vars
-  include_vars: "{{ item }}"
+# TODO use loop_control/loop_var here.  Can't do this ATM because of
+# https://github.com/ansible/ansible/issues/17101
+- name: include relevant vars
+  include_vars: '{{ item }}'
   with_first_found:
-    - "{{ ansible_pkg_mgr | replace('pacman', 'packer') }}.yml"
-    - dummy.yml
+    - files:
+        - '{{ ansible_pkg_mgr | default("dummy") | replace("pacman", "packer") }}.yml'
+        - dummy.yml
+      paths:
+        - '{{ role_path}}/vars'
+    - files:
+        - '{{ ansible_os_family | default("dummy") }}.yml'
+        - dummy.yml
+      paths:
+        - '{{ role_path}}/vars'
+    - files:
+        - '{{ ansible_distribution | default("dummy") }}.yml'
+        - dummy.yml
+      paths:
+        - '{{ role_path}}/vars'
   tags:
     - always
 
-- name: include OS family vars
-  include_vars: "{{ item }}"
-  with_first_found:
-    - "{{ ansible_os_family }}.yml"
-    - dummy.yml
-  tags:
-    - always
-
-- name: include distribution vars
-  include_vars: "{{ item }}"
-  with_first_found:
-    - "{{ ansible_distribution }}.yml"
-    - dummy.yml
-  tags:
-    - always
-
-- include: packer.yml
+- name: include Packer tasks
+  include: packer.yml
   when: ansible_pkg_mgr == 'pacman'
   tags:
-    - sabnzbd
     - pacman
+    - package
     - packer
+    - sabnzbd.pacman
+    - sabnzbd.package
+    - sabnzbd.packer
 
-- include: apt.yml
+- name: include Apt tasks
+  include: apt.yml
   when: ansible_pkg_mgr == 'apt'
   tags:
-    - sabnzbd
     - apt
-    - packer
+    - package
+    - sabnzbd.apt
+    - sabnzbd.package
 
-- include: yum.yml
+- name: include YUM tasks
+  include: yum.yml
   when: ansible_pkg_mgr == 'yum'
   tags:
-    - sabnzbd
+    - package
     - yum
-    - packer
-
-- name: get pre-run stat of sabnzbd config
-  stat:
-    follow: "{{ sabnzbd_config_follow | default(omit) }}"
-    get_checksum: yes
-    path: "{{ sabnzbd_config_dest }}"
-  register: sabnzbd_config_st_pre
-  when: sabnzbd_service_restarted_on_change | bool
-  changed_when: sabnzbd_service_restarted_on_change | bool
-  notify: get post-run stat of sabnzbd config
-  tags:
-    - sabnzbd
-    - config
-    - service
-
-- include: service.yml
-  tags:
-    - sabnzbd
-    - service
-
-- name: notify sabnzbd service restart handler
-  debug: notify sabnzbd service restart handler
-  when: sabnzbd_service_restarted | bool
-  changed_when: sabnzbd_service_restarted | bool
-  notify: restart sabnzbd service
+    - sabnzbd.package
+    - sabnzbd.yum
