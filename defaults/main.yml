@@ -1,4 +1,0 @@
----
-# defaults file for sabnzbd
-sabnzbd_homedir: /opt/sabnzbd
-sabnzbd_config_dest: "{{ sabnzbd_homedir }}/sabnzbd.ini"

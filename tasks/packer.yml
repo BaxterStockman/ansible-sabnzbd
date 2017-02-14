@@ -1,5 +1,0 @@
----
-- name: install sabnzbd
-  packer:
-    name: "{{ sabnzbd_pkg | default('sabnzbd') }}"
-    state: present

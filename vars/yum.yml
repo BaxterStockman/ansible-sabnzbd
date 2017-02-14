@@ -1,3 +1,0 @@
----
-sabnzbd_pkg_repo_url: "https://dl.dropboxusercontent.com/u/14500830/SABnzbd/RHEL-CentOS/SABnzbd-{{ ansible_distribution_major_version | mandatory }}.repo"
-sabnzbd_pkg: SABnzbd
